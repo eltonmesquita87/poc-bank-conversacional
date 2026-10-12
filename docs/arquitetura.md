@@ -43,7 +43,7 @@ C4Context
 
     System(mdbank, "MD Bank AI", "Assistente bancário conversacional multi-agente. Abre contas, emite cartões e consulta dados por CPF")
 
-    System_Ext(openai, "Anthropic API", "LLM Claude (claude-sonnet-5-5) usado pelo roteador e pelos agentes")
+    System_Ext(openai, "Anthropic API", "LLM Claude (claude-haiku-5-5) usado pelo roteador e pelos agentes")
 
     Rel(cliente, mdbank, "Conversa em linguagem natural", "HTTP")
     Rel(mdbank, openai, "Classificação de intenção e tool calling", "HTTPS")
@@ -58,7 +58,7 @@ C4Container
     title Nível 2 - Containers do MD Bank AI
 
     Person(cliente, "Cliente", "Quer abrir conta ou solicitar cartão")
-    System_Ext(openai, "Anthropic API", "LLM claude-sonnet-5-5")
+    System_Ext(openai, "Anthropic API", "LLM claude-haiku-5-5")
 
     System_Boundary(mdbank, "MD Bank AI - docker-compose") {
         Container(frontend, "frontend", "Streamlit :9090", "Chat simples com resposta síncrona")
@@ -111,7 +111,7 @@ C4Component
     Container(frontend, "frontend", "Streamlit", "Cliente REST")
     Container(frontend2, "frontend2", "React", "Cliente AG-UI")
     Container(agentes, "Agentes A2A", "abrir_conta e cartao_credito", "Especialistas de domínio")
-    System_Ext(openai, "Anthropic API", "claude-sonnet-5-5")
+    System_Ext(openai, "Anthropic API", "claude-haiku-5-5")
 
     Container_Boundary(supervisor, "supervisor - FastAPI :8080") {
         Component(chat, "POST /chat", "FastAPI route", "Resposta síncrona, executa o grafo LangGraph")
@@ -158,7 +158,7 @@ C4Component
 | Streamlit → supervisor | REST JSON | `POST /chat {message, session_id, client_id}` |
 | supervisor → agentes | A2A | `A2ACardResolver` descobre o card e `client.send_message` (sem streaming), com cache de clientes. Veja [request_agent](../supervisor/src/services.py) |
 | agentes → recursos | MCP via `langchain-mcp-adapters` | Tools carregadas dinamicamente de `http://recursos:8000/mcp_gateway` |
-| agentes/supervisor → Anthropic | API | `claude-sonnet-5-5`, via `ANTHROPIC_API_KEY` no `.env` de cada serviço |
+| agentes/supervisor → Anthropic | API | `claude-haiku-5-5`, via `ANTHROPIC_API_KEY` no `.env` de cada serviço |
 | bfa → agentes e recursos | A2A card + REST `/tools` | Indexa skills e tools em BM25 |
 
 ### Superfície MCP do `recursos`

@@ -7,7 +7,7 @@ Fluxo recomendado: sobe todos os serviços com um único comando, sem instalar P
 | Item | Detalhe |
 |---|---|
 | Docker Desktop | Com Docker Compose v2 (`docker compose`). No Windows, use o backend WSL 2 |
-| Chave da Anthropic | Usada com o modelo `claude-sonnet-5-5` pelo supervisor e pelos dois agentes |
+| Chave da Anthropic | Usada com o modelo `claude-haiku-5-5` pelo supervisor e pelos dois agentes |
 | Portas livres | 3000, 8080, 8081, 8082, 8083, 8084 e 9090 |
 | Git | Para clonar o repositório |
 
@@ -46,11 +46,25 @@ $k = "ANTHROPIC_API_KEY=sk-ant-...sua-chave..."
 
 **3. Suba os containers**
 
+Use o script da sua plataforma (veja [Scripts de automação](#scripts-de-automação)):
+
+```powershell
+# Windows (PowerShell)
+.\scripts\start.ps1
+```
+
+```bash
+# Linux / macOS
+./scripts/start.sh
+```
+
+Ou, direto pelo Compose:
+
 ```bash
 docker compose up --build
 ```
 
-O primeiro build leva alguns minutos (instala dependências Python e roda `npm install` do frontend2). Para rodar em segundo plano, use `docker compose up --build -d`.
+O primeiro build leva alguns minutos (instala dependências Python e roda `npm install` do frontend2). Para rodar em segundo plano, use `docker compose up --build -d` (os scripts já fazem isso).
 
 **4. Aguarde a inicialização**
 
@@ -86,6 +100,27 @@ curl -X POST http://localhost:8080/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "quero abrir uma conta", "session_id": "1", "client_id": "1"}'
 ```
+
+## Scripts de automação
+
+A pasta [scripts](../scripts) tem atalhos para subir e parar todos os serviços. Podem ser executados de qualquer diretório.
+
+| Ação | Windows (PowerShell) | Linux / macOS |
+|---|---|---|
+| Iniciar (com build) | `.\scripts\start.ps1` | `./scripts/start.sh` |
+| Iniciar sem rebuild | `.\scripts\start.ps1 -NoBuild` | `./scripts/start.sh --no-build` |
+| Parar e remover containers | `.\scripts\stop.ps1` | `./scripts/stop.sh` |
+
+O que o `start` faz:
+
+1. Confere se o Docker está instalado e em execução.
+2. Avisa se algum dos três `.env` (com `ANTHROPIC_API_KEY`) não existir.
+3. Executa `docker compose up -d` (com `--build`, salvo `-NoBuild` / `--no-build`).
+4. Exibe o status dos containers e as URLs de acesso.
+
+O `stop` executa `docker compose down`. Os dados em `recursos/db.json` são preservados.
+
+> **Linux / macOS:** se o script não tiver permissão de execução, rode `chmod +x scripts/*.sh`. No Windows, se a política de execução bloquear o `.ps1`, use `powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1`.
 
 ## Operação do dia a dia
 

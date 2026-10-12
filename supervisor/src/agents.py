@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 _llm = init_chat_model(
-    model="claude-sonnet-5-5",
+    model="claude-haiku-5-5",
     model_provider="anthropic",
     api_key=os.getenv("ANTHROPIC_API_KEY"),
 )

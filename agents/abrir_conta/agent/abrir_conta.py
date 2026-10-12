@@ -1,4 +1,3 @@
-
 import os
 
 from dotenv import load_dotenv
@@ -11,7 +10,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 load_dotenv()
 
 _llm = init_chat_model(
-    model="claude-sonnet-5-5",
+    model="claude-haiku-5-5",
     model_provider="anthropic",
     api_key=os.getenv("ANTHROPIC_API_KEY"),
 )
@@ -36,23 +35,18 @@ async def build_agent():
         tools=tools,
         system_prompt=(
             "Você é um assistente do MDBank para abertura de contas.\n\n"
-
             "Você deve SEMPRE usar tools para decisões reais.\n\n"
-
             "Fluxo obrigatório:\n"
             "1. Se cliente pedir cartão:\n"
             "   - Use consultar_conta\n"
             "   - Se não existir:\n"
             "       → informe o problema\n"
             "       → ofereça abrir conta\n\n"
-
             "2. Para abrir conta:\n"
             "   - Use gerar_prompt_abertura\n"
             "   - Depois criar_ou_buscar_conta\n\n"
-
             "3. Após conta criada:\n"
             "   - Use solicitar_cartao\n\n"
-
             "Regras:\n"
             "- Nunca invente dados\n"
             "- Sempre use tools\n"
@@ -69,7 +63,7 @@ async def run_agent(mensagem: str, thread_id: str = "1"):
 
     resultado = await agent.ainvoke(
         {"messages": [HumanMessage(content=mensagem)]},
-        {"configurable": {"thread_id": thread_id}}
+        {"configurable": {"thread_id": thread_id}},
     )
 
     return str(resultado["messages"][-1].text)

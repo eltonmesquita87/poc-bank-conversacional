@@ -39,6 +39,13 @@ Requer Docker Desktop e uma chave da Anthropic.
 docker compose up --build
 ```
 
+Ou use os scripts de [scripts](scripts):
+
+| Ação | Windows (PowerShell) | Linux / macOS |
+|---|---|---|
+| Iniciar | `.\scripts\start.ps1` | `./scripts/start.sh` |
+| Parar | `.\scripts\stop.ps1` | `./scripts/stop.sh` |
+
 Acesse http://localhost:3000 (React) ou http://localhost:9090 (Streamlit). Detalhes em [Executando com Docker](docs/execucao-docker.md).
 
 ## Docker ou UV?
