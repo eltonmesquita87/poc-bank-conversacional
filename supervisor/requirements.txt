@@ -1,10 +1,10 @@
 fastapi
 uvicorn
-a2a-sdk
+a2a-sdk<1
 ag-ui-protocol
 langgraph
 langchain
-langchain_openai
+langchain-anthropic
 langchain-community
 httpx
 python-dotenv

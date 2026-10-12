@@ -1,14 +1,10 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 
 from discovery import discover_agents
 from mcp_discovery import discover_tools
-
-from registry import (
-    AGENT_REGISTRY,
-    build_index,
-    resolve_agent
-)
+from registry import AGENT_REGISTRY, build_index, resolve_agent
 
 
 @asynccontextmanager
@@ -47,12 +43,7 @@ def resolve(query: str, top_k: int = 3, threshold: float = 0.3):
 
 @app.get("/resolve/agents")
 def resolve_agents(query: str, top_k: int = 3, threshold: float = 0.3):
-    result = resolve_agent(
-        query,
-        top_k=top_k,
-        threshold=threshold,
-        filter_type="agent"
-    )
+    result = resolve_agent(query, top_k=top_k, threshold=threshold, filter_type="agent")
 
     if not result:
         return {"error": "no match"}
@@ -62,12 +53,7 @@ def resolve_agents(query: str, top_k: int = 3, threshold: float = 0.3):
 
 @app.get("/resolve/tools")
 def resolve_tools(query: str, top_k: int = 3, threshold: float = 0.3):
-    result = resolve_agent(
-        query,
-        top_k=top_k,
-        threshold=threshold,
-        filter_type="tool"
-    )
+    result = resolve_agent(query, top_k=top_k, threshold=threshold, filter_type="tool")
 
     if not result:
         return {"error": "no match"}
@@ -77,18 +63,12 @@ def resolve_tools(query: str, top_k: int = 3, threshold: float = 0.3):
 
 @app.get("/skills/agents")
 def listar_agents():
-    return {
-        k: v for k, v in AGENT_REGISTRY.items()
-        if v.get("type") == "agent"
-    }
+    return {k: v for k, v in AGENT_REGISTRY.items() if v.get("type") == "agent"}
 
 
 @app.get("/skills/tools")
 def listar_tools():
-    return {
-        k: v for k, v in AGENT_REGISTRY.items()
-        if v.get("type") == "tool"
-    }
+    return {k: v for k, v in AGENT_REGISTRY.items() if v.get("type") == "tool"}
 
 
 @app.get("/")

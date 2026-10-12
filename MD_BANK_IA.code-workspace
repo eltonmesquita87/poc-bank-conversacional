@@ -1,0 +1,88 @@
+{
+  "folders": [
+    { "name": "agents/abrir_conta", "path": "agents/abrir_conta" },
+    { "name": "agents/cartao_credito", "path": "agents/cartao_credito" },
+    { "name": "bfa", "path": "bfa" },
+    { "name": "frontend", "path": "frontend" },
+    { "name": "frontend2", "path": "frontend2" },
+    { "name": "recursos", "path": "recursos" },
+    { "name": "supervisor", "path": "supervisor" },
+    { "name": "raiz (docs)", "path": "." }
+  ],
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "recursos (MCP)",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:recursos}/.venv/Scripts/python.exe",
+        "module": "fastmcp.cli",
+        "args": ["run", "app.py:mcp", "--transport", "http", "--host", "127.0.0.10", "--port", "8000", "--path", "/mcp_gateway"],
+        "cwd": "${workspaceFolder:recursos}",
+        "justMyCode": false
+      },
+      {
+        "name": "abrir_conta",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:agents/abrir_conta}/.venv/Scripts/python.exe",
+        "module": "uvicorn",
+        "args": ["server:app", "--host", "127.0.0.12", "--port", "8000"],
+        "cwd": "${workspaceFolder:agents/abrir_conta}"
+      },
+      {
+        "name": "cartao_credito",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:agents/cartao_credito}/.venv/Scripts/python.exe",
+        "module": "uvicorn",
+        "args": ["server:app", "--host", "127.0.0.13", "--port", "8000"],
+        "cwd": "${workspaceFolder:agents/cartao_credito}"
+      },
+      {
+        "name": "supervisor",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:supervisor}/.venv/Scripts/python.exe",
+        "module": "uvicorn",
+        "args": ["app:app", "--host", "127.0.0.11", "--port", "8000"],
+        "cwd": "${workspaceFolder:supervisor}"
+      },
+      {
+        "name": "supervisor (React)",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:supervisor}/.venv/Scripts/python.exe",
+        "module": "uvicorn",
+        "args": ["app:app", "--host", "127.0.0.1", "--port", "8080"],
+        "cwd": "${workspaceFolder:supervisor}"
+      },
+      {
+        "name": "bfa",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:bfa}/.venv/Scripts/python.exe",
+        "module": "uvicorn",
+        "args": ["app:app", "--host", "127.0.0.14", "--port", "8000"],
+        "cwd": "${workspaceFolder:bfa}"
+      },
+      {
+        "name": "frontend (Streamlit)",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${workspaceFolder:frontend}/.venv/Scripts/python.exe",
+        "module": "streamlit",
+        "args": ["run", "app.py", "--server.port", "9090"],
+        "cwd": "${workspaceFolder:frontend}"
+      }
+    ],
+    "compounds": [
+      {
+        "name": "Backend completo",
+        "configurations": ["recursos (MCP)", "abrir_conta", "cartao_credito", "supervisor", "bfa"],
+        "stopAll": true
+      }
+    ]
+  }
+}

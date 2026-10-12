@@ -2,6 +2,7 @@ from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
+
 from executor import AbrirContaExecutor
 
 # -----------------------
@@ -18,14 +19,14 @@ skill = AgentSkill(
         "conta corrente",
         "conta poupança",
         "abrir conta digital",
-        "cadastro bancário"
+        "cadastro bancário",
     ],
     examples=[
         "quero abrir uma conta",
         "como faço para abrir uma conta?",
         "quais tipos de conta vocês oferecem?",
         "quero criar uma conta corrente",
-        "posso abrir uma conta digital?"
+        "posso abrir uma conta digital?",
     ],
 )
 

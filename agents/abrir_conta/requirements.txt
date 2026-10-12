@@ -1,9 +1,9 @@
-a2a-sdk[http-server]
+a2a-sdk[http-server]<1
 httpx
 pydantic
 uvicorn
 langchain
-langchain_openai
+langchain-anthropic
 langchain-community
 langchain-mcp-adapters
 python-dotenv

@@ -7,7 +7,7 @@ Fluxo recomendado: sobe todos os serviços com um único comando, sem instalar P
 | Item | Detalhe |
 |---|---|
 | Docker Desktop | Com Docker Compose v2 (`docker compose`). No Windows, use o backend WSL 2 |
-| Chave da OpenAI | Usada com o modelo `gpt-4o` pelo supervisor e pelos dois agentes |
+| Chave da Anthropic | Usada com o modelo `claude-sonnet-5-5` pelo supervisor e pelos dois agentes |
 | Portas livres | 3000, 8080, 8081, 8082, 8083, 8084 e 9090 |
 | Git | Para clonar o repositório |
 
@@ -23,7 +23,7 @@ git checkout feature/modulo1
 
 **2. Crie o arquivo `.env` em três serviços**
 
-O código lê `OPENAI_API_KEY` com `load_dotenv()`, e o `docker-compose.yml` não define `env_file`. Por isso o arquivo precisa existir **dentro de cada pasta** abaixo (a pasta é montada em `/app` no container):
+O código lê `ANTHROPIC_API_KEY` com `load_dotenv()`, e o `docker-compose.yml` não define `env_file`. Por isso o arquivo precisa existir **dentro de cada pasta** abaixo (a pasta é montada em `/app` no container):
 
 - `supervisor/.env`
 - `agents/abrir_conta/.env`
@@ -32,13 +32,13 @@ O código lê `OPENAI_API_KEY` com `load_dotenv()`, e o `docker-compose.yml` nã
 Conteúdo, o mesmo nos três:
 
 ```env
-OPENAI_API_KEY=sk-...sua-chave...
+ANTHROPIC_API_KEY=sk-ant-...sua-chave...
 ```
 
 Atalho (PowerShell):
 
 ```powershell
-$k = "OPENAI_API_KEY=sk-...sua-chave..."
+$k = "ANTHROPIC_API_KEY=sk-ant-...sua-chave..."
 "supervisor", "agents/abrir_conta", "agents/cartao_credito" | ForEach-Object { Set-Content "$_/.env" $k }
 ```
 

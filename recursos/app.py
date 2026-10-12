@@ -1,11 +1,12 @@
+import json
 import os
+import random
+from typing import Any, Dict, Optional
+
+from fastmcp import Context, FastMCP
+from fastmcp.prompts import Message
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from fastmcp import FastMCP, Context
-from fastmcp.prompts import Message
-from typing import Optional, Dict, Any
-import random
-import json
 
 mcp = FastMCP("ContaService")
 
@@ -29,10 +30,7 @@ def load_db() -> Dict[str, Any]:
 def save_db():
     try:
         with open(DB_FILE, "w") as f:
-            json.dump({
-                "contas": contas_mdbank,
-                "cartoes": cartoes_mdbank
-            }, f, indent=2)
+            json.dump({"contas": contas_mdbank, "cartoes": cartoes_mdbank}, f, indent=2)
     except Exception as e:
         print("Erro ao salvar DB:", e)
 
@@ -100,14 +98,14 @@ def solicitar_cartao_prompt(cpf: str, tipo: str):
     return [
         Message(f"Cliente quer cartão {tipo}"),
         Message(f"CPF: {cpf}"),
-        Message("Verifique se possui conta antes de emitir cartão.",
-                role="assistant"),
+        Message("Verifique se possui conta antes de emitir cartão.", role="assistant"),
     ]
 
 
 # -------------------------
 # TOOLS (ENRIQUECIDAS)
 # -------------------------
+
 
 @mcp.tool(
     description="Consulta se um cliente possui conta bancária a partir do CPF",
@@ -118,9 +116,9 @@ def solicitar_cartao_prompt(cpf: str, tipo: str):
             "ver se tenho conta",
             "checar conta existente",
             "buscar conta pelo cpf",
-            "cliente possui conta?"
-        ]
-    }
+            "cliente possui conta?",
+        ],
+    },
 )
 async def consultar_conta(cpf: str, ctx: Context):
     resource = await ctx.read_resource(f"conta://{cpf}")
@@ -138,9 +136,9 @@ async def consultar_conta(cpf: str, ctx: Context):
             "consultar cartao cpf 123",
             "ver cartao do cliente",
             "checar cartao existente",
-            "cliente tem cartao?"
-        ]
-    }
+            "cliente tem cartao?",
+        ],
+    },
 )
 async def consultar_cartao(cpf: str, ctx: Context):
     resource = await ctx.read_resource(f"cartao://{cpf}")
@@ -159,9 +157,9 @@ async def consultar_cartao(cpf: str, ctx: Context):
             "criar conta nova",
             "cadastrar conta",
             "quero abrir uma conta",
-            "criar conta com cpf"
-        ]
-    }
+            "criar conta com cpf",
+        ],
+    },
 )
 async def criar_ou_buscar_conta(nome: str, cpf: str, ctx: Context):
     cpf = cpf.strip()
@@ -171,10 +169,7 @@ async def criar_ou_buscar_conta(nome: str, cpf: str, ctx: Context):
     data = extract_resource_data(resource)
 
     if data and "erro" not in data:
-        return {
-            "status": "existente",
-            "conta": data
-        }
+        return {"status": "existente", "conta": data}
 
     numero_conta = random.randint(10000, 99999)
     conta = {
@@ -186,10 +181,7 @@ async def criar_ou_buscar_conta(nome: str, cpf: str, ctx: Context):
     contas_mdbank[cpf] = conta
     save_db()
 
-    return {
-        "status": "criada",
-        "conta": conta
-    }
+    return {"status": "criada", "conta": conta}
 
 
 @mcp.tool(
@@ -201,9 +193,9 @@ async def criar_ou_buscar_conta(nome: str, cpf: str, ctx: Context):
             "solicitar cartao",
             "emitir cartao de credito",
             "gerar cartao platinum",
-            "criar cartao para cpf 123"
-        ]
-    }
+            "criar cartao para cpf 123",
+        ],
+    },
 )
 async def solicitar_cartao(cpf: str, tipo: str, ctx: Context):
     cpf = cpf.strip()
@@ -213,34 +205,25 @@ async def solicitar_cartao(cpf: str, tipo: str, ctx: Context):
     conta = extract_resource_data(resource)
 
     if not conta or "erro" in conta:
-        return {
-            "status": "erro",
-            "mensagem": "Cliente não possui conta"
-        }
+        return {"status": "erro", "mensagem": "Cliente não possui conta"}
 
     resource_cartao = await ctx.read_resource(f"cartao://{cpf}")
     cartao_existente = extract_resource_data(resource_cartao)
 
     if cartao_existente and "erro" not in cartao_existente:
-        return {
-            "status": "existente",
-            "cartao": cartao_existente
-        }
+        return {"status": "existente", "cartao": cartao_existente}
 
     numero_cartao = random.randint(100000, 999999)
     cartao = {
         "numero": numero_cartao,
         "tipo": tipo,
-        "limite": random.randint(1000, 5000)
+        "limite": random.randint(1000, 5000),
     }
 
     cartoes_mdbank[cpf] = cartao
     save_db()
 
-    return {
-        "status": "criado",
-        "cartao": cartao
-    }
+    return {"status": "criado", "cartao": cartao}
 
 
 @mcp.tool(
@@ -249,15 +232,12 @@ async def solicitar_cartao(cpf: str, tipo: str, ctx: Context):
         "tags": ["prompt", "conta"],
         "examples": [
             "gerar prompt de abertura de conta",
-            "criar mensagem para abrir conta"
-        ]
-    }
+            "criar mensagem para abrir conta",
+        ],
+    },
 )
 async def gerar_prompt_abertura(nome: str, cpf: str, ctx: Context):
-    prompt = await ctx.get_prompt(
-        "abrir_conta_prompt",
-        {"nome": nome, "cpf": cpf}
-    )
+    prompt = await ctx.get_prompt("abrir_conta_prompt", {"nome": nome, "cpf": cpf})
     return [m.content for m in prompt.messages]
 
 
@@ -275,39 +255,28 @@ async def list_tools(request: Request) -> JSONResponse:
                 "properties": {
                     "cpf": {"type": "string", "description": "CPF do cliente"}
                 },
-                "required": ["cpf"]
+                "required": ["cpf"],
             },
             "consultar_cartao": {
                 "type": "object",
-                "properties": {
-                    "cpf": {"type": "string"}
-                },
-                "required": ["cpf"]
+                "properties": {"cpf": {"type": "string"}},
+                "required": ["cpf"],
             },
             "criar_ou_buscar_conta": {
                 "type": "object",
-                "properties": {
-                    "nome": {"type": "string"},
-                    "cpf": {"type": "string"}
-                },
-                "required": ["nome", "cpf"]
+                "properties": {"nome": {"type": "string"}, "cpf": {"type": "string"}},
+                "required": ["nome", "cpf"],
             },
             "solicitar_cartao": {
                 "type": "object",
-                "properties": {
-                    "cpf": {"type": "string"},
-                    "tipo": {"type": "string"}
-                },
-                "required": ["cpf", "tipo"]
+                "properties": {"cpf": {"type": "string"}, "tipo": {"type": "string"}},
+                "required": ["cpf", "tipo"],
             },
             "gerar_prompt_abertura": {
                 "type": "object",
-                "properties": {
-                    "nome": {"type": "string"},
-                    "cpf": {"type": "string"}
-                },
-                "required": ["nome", "cpf"]
-            }
+                "properties": {"nome": {"type": "string"}, "cpf": {"type": "string"}},
+                "required": ["nome", "cpf"],
+            },
         }
 
         tools = []
@@ -315,21 +284,24 @@ async def list_tools(request: Request) -> JSONResponse:
         for tool in result:
             annotations = getattr(tool, "annotations", None)
 
-            tools.append({
-                "name": tool.name,
-                "description": tool.description or "",
-                "inputSchema": schema_map.get(tool.name, {}),
-                "annotations": {
-                    "tags": getattr(annotations, "tags", []) if annotations else [],
-                    "examples": getattr(annotations, "examples", []) if annotations else [],
+            tools.append(
+                {
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "inputSchema": schema_map.get(tool.name, {}),
+                    "annotations": {
+                        "tags": getattr(annotations, "tags", []) if annotations else [],
+                        "examples": getattr(annotations, "examples", [])
+                        if annotations
+                        else [],
+                    },
                 }
-            })
+            )
 
         return JSONResponse(tools)
 
     except Exception as e:
         print("ERRO /tools:", e)
         return JSONResponse(
-            {"error": "failed to list tools", "details": str(e)},
-            status_code=500
+            {"error": "failed to list tools", "details": str(e)}, status_code=500
         )

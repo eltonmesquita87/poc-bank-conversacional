@@ -2,6 +2,6 @@ fastapi
 uvicorn
 httpx
 python-dotenv
-a2a-sdk
+a2a-sdk<1
 rank-bm25
 numpy

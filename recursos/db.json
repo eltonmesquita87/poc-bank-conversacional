@@ -1,0 +1,16 @@
+{
+  "contas": {
+    "01540499138": {
+      "nome": "elton pereira mesquita",
+      "numero": 35127,
+      "saldo": 0.0
+    }
+  },
+  "cartoes": {
+    "01540499138": {
+      "numero": 586559,
+      "tipo": "Gold",
+      "limite": 3582
+    }
+  }
+}

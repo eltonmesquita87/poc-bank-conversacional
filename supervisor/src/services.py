@@ -1,21 +1,19 @@
 import logging
-import httpx
 import uuid
-
-from langgraph.graph import StateGraph, START, END
-from langgraph.types import Send
-from typing import TypedDict, Annotated
 from operator import add
+from typing import Annotated, TypedDict
 
-from a2a.client import A2ACardResolver, ClientFactory, ClientConfig
+import httpx
+from a2a.client import A2ACardResolver, ClientConfig, ClientFactory
 from a2a.types import Message, Part, Role, TextPart
-
 from ag_ui.core import (
     EventType,
-    TextMessageStartEvent,
     TextMessageContentEvent,
-    TextMessageEndEvent
+    TextMessageEndEvent,
+    TextMessageStartEvent,
 )
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import Send
 from pydantic import BaseModel
 
 from src.agents import classifique_intencao_do_usuario
@@ -32,7 +30,7 @@ HTTPX_CLIENT = httpx.AsyncClient(timeout=30)
 # -----------------------------
 AGENTS = {
     "cartao_credito": "http://cartao_credito_agent:8000",
-    "abrir_conta": "http://abrir_conta_agent:8000"
+    "abrir_conta": "http://abrir_conta_agent:8000",
 }
 
 # Cache de clientes A2A
@@ -47,6 +45,7 @@ class State(TypedDict):
     query: str
     responses: Annotated[list[str], add]
 
+
 # -----------------------------
 # EVENTO PARA STATE UPDATE
 # -----------------------------
@@ -55,6 +54,7 @@ class State(TypedDict):
 class StateUpdateEvent(BaseModel):
     type: str = "STATE_UPDATE"
     state: dict
+
 
 # -----------------------------
 # CHAMADA PARA AGENTE A2A
@@ -74,10 +74,7 @@ async def request_agent(message: str, agent_url: str) -> str:
         agent_card = await resolver.get_agent_card()
         logger.info(f"Agent encontrado: {agent_card.name}")
 
-        config = ClientConfig(
-            httpx_client=HTTPX_CLIENT,
-            streaming=False
-        )
+        config = ClientConfig(httpx_client=HTTPX_CLIENT, streaming=False)
         factory = ClientFactory(config)
         CLIENT_CACHE[agent_url] = factory.create(agent_card)
 
@@ -99,6 +96,7 @@ async def request_agent(message: str, agent_url: str) -> str:
 
     return "Sem resposta do agente."
 
+
 # -----------------------------
 # ROUTER
 # -----------------------------
@@ -109,6 +107,7 @@ async def no_de_roteamento(state: State):
     classifications = await classifique_intencao_do_usuario(query)
     logger.info(f"Classificação: {classifications}")
     return [Send(c["agent"], {"query": c["query"]}) for c in classifications]
+
 
 # -----------------------------
 # NODE CARTAO
@@ -121,6 +120,7 @@ async def cartao_credito_node(state: State):
     resposta = await request_agent(query, AGENTS["cartao_credito"])
     return {"responses": [resposta]}
 
+
 # -----------------------------
 # NODE ABRIR CONTA
 # -----------------------------
@@ -131,6 +131,7 @@ async def abrir_conta_node(state: State):
     logger.info("Executando agente ABRIR_CONTA")
     resposta = await request_agent(query, AGENTS["abrir_conta"])
     return {"responses": [resposta]}
+
 
 # -----------------------------
 # BUILD DO GRAFO
@@ -153,6 +154,7 @@ async def executar_supervisor(texto_usuario: str):
     result = await graph.ainvoke(input_state)
     return "\n\n".join(result["responses"])
 
+
 # -----------------------------
 # EXECUTOR DO SUPERVISOR (STREAMING COM STATE)
 # -----------------------------
@@ -172,16 +174,14 @@ async def executar_supervisor_stream(input_data):
 
     # Início da mensagem do assistant
     yield TextMessageStartEvent(
-        type=EventType.TEXT_MESSAGE_START,
-        message_id=assistant_id,
-        role="assistant"
+        type=EventType.TEXT_MESSAGE_START, message_id=assistant_id, role="assistant"
     )
 
     # Mensagem inicial
     yield TextMessageContentEvent(
         type=EventType.TEXT_MESSAGE_CONTENT,
         message_id=assistant_id,
-        delta="Analisando sua solicitação...\n\n"
+        delta="Analisando sua solicitação...\n\n",
     )
 
     # Estado inicial
@@ -194,7 +194,7 @@ async def executar_supervisor_stream(input_data):
     yield TextMessageContentEvent(
         type=EventType.TEXT_MESSAGE_CONTENT,
         message_id=assistant_id,
-        delta=f"Agentes selecionados: {', '.join(agentes)}\n\n"
+        delta=f"Agentes selecionados: {', '.join(agentes)}\n\n",
     )
 
     # Atualiza state
@@ -208,7 +208,7 @@ async def executar_supervisor_stream(input_data):
         yield TextMessageContentEvent(
             type=EventType.TEXT_MESSAGE_CONTENT,
             message_id=assistant_id,
-            delta=f"Chamando agente: {agent_name}...\n"
+            delta=f"Chamando agente: {agent_name}...\n",
         )
 
         resposta = await request_agent(c["query"], AGENTS[agent_name])
@@ -217,7 +217,7 @@ async def executar_supervisor_stream(input_data):
         yield TextMessageContentEvent(
             type=EventType.TEXT_MESSAGE_CONTENT,
             message_id=assistant_id,
-            delta=f"{agent_name} respondeu\n\n"
+            delta=f"{agent_name} respondeu\n\n",
         )
 
         # Atualiza state após cada agente
@@ -229,11 +229,8 @@ async def executar_supervisor_stream(input_data):
     yield TextMessageContentEvent(
         type=EventType.TEXT_MESSAGE_CONTENT,
         message_id=assistant_id,
-        delta=f"Resultado final:\n\n{resposta_final}"
+        delta=f"Resultado final:\n\n{resposta_final}",
     )
 
     # Fim da mensagem
-    yield TextMessageEndEvent(
-        type=EventType.TEXT_MESSAGE_END,
-        message_id=assistant_id
-    )
+    yield TextMessageEndEvent(type=EventType.TEXT_MESSAGE_END, message_id=assistant_id)

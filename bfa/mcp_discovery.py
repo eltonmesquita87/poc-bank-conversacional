@@ -1,5 +1,6 @@
-import httpx
 import json
+
+import httpx
 
 MCP_ENDPOINTS = [
     "http://recursos:8000"

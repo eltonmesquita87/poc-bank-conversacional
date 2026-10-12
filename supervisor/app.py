@@ -1,17 +1,17 @@
 import logging
 from typing import cast
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
 
 from ag_ui.core import (
-    RunAgentInput,
+    BaseEvent,
     EventType,
-    RunStartedEvent,
+    RunAgentInput,
     RunFinishedEvent,
-    BaseEvent
+    RunStartedEvent,
 )
 from ag_ui.encoder import EventEncoder
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from src.schemas import ChatRequest
 from src.services import executar_supervisor, executar_supervisor_stream

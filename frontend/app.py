@@ -1,5 +1,5 @@
-import streamlit as st
 import requests
+import streamlit as st
 
 API_URL = "http://supervisor:8000/chat"
 

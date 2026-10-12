@@ -8,6 +8,7 @@ Assistente bancário conversacional **multi-agente** de um banco digital fictíc
 |---|---|
 | [Executando com Docker](docs/execucao-docker.md) | Pré-requisitos, passo a passo, portas, operação e problemas comuns |
 | [Executando localmente com UV](docs/execucao-local-uv.md) | Rodar cada serviço sem Docker, com ambiente virtual por projeto |
+| [Depurando no VS Code](docs/depuracao-vscode.md) | Breakpoints nos serviços locais, com configurações prontas no workspace |
 | [Exemplos de conversa](docs/exemplos-de-conversa.md) | Fluxo completo e frases para testar o roteador |
 | [Arquitetura](docs/arquitetura.md) | Diagramas C4, integrações, fluxo principal, pontos de atenção e próximos passos |
 
@@ -29,10 +30,10 @@ Cliente ──AG-UI/REST──► supervisor ──A2A──► agentes (abrir_c
 
 ## Início rápido
 
-Requer Docker Desktop e uma chave da OpenAI.
+Requer Docker Desktop e uma chave da Anthropic.
 
 ```bash
-# 1. coloque OPENAI_API_KEY=sk-... em supervisor/.env,
+# 1. coloque ANTHROPIC_API_KEY=sk-... em supervisor/.env,
 #    agents/abrir_conta/.env e agents/cartao_credito/.env
 # 2. suba tudo
 docker compose up --build
@@ -47,4 +48,4 @@ Acesse http://localhost:3000 (React) ou http://localhost:9090 (Streamlit). Detal
 | Instalação na máquina | Só Docker | Python (via uv), Node para o React |
 | Configuração extra | Nenhuma | Entradas no arquivo `hosts` (admin) |
 | Hot reload | Sim, por volume | Sim, `--reload` |
-| Indicado para | Subir o sistema completo | Depurar um serviço isolado |
+| Indicado para | Subir o sistema completo | Depurar um serviço isolado ([guia VS Code](docs/depuracao-vscode.md)) |
