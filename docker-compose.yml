@@ -1,0 +1,72 @@
+services:
+
+  supervisor:
+    build: ./supervisor
+    container_name: mdbank_supervisor_agents
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./supervisor:/app
+
+  frontend:
+    build: ./frontend
+    container_name: mdbank_frontend
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./frontend:/app
+
+  abrir_conta_agent:
+    container_name: abrir_conta_agent
+    build:
+      context: ./agents/abrir_conta
+    volumes:
+      - ./agents/abrir_conta:/app
+    ports:
+      - "8081:8000"
+
+  cartao_credito_agent:
+    container_name: cartao_credito_agent
+    build:
+      context: ./agents/cartao_credito
+    volumes:
+      - ./agents/cartao_credito:/app
+    ports:
+      - "8082:8000"
+
+  bfa:
+    container_name: bfa
+    build:
+      context: ./bfa
+    volumes:
+      - ./bfa:/app
+    ports:
+      - "8083:8000"
+    depends_on:
+      - recursos
+      - supervisor
+      - abrir_conta_agent
+      - cartao_credito_agent
+
+  recursos:
+    container_name: recursos
+    build:
+      context: ./recursos
+    volumes:
+      - ./recursos:/app
+    ports:
+      - "8084:8000"
+  frontend-ag-ui:
+    build: ./frontend2
+    container_name: frontend-ag-ui
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend2:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_INTERVAL=1000
+      - FAST_REFRESH=true
+    command: npm start
