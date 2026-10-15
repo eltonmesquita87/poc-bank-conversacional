@@ -1,4 +1,4 @@
-# MD Bank
+# EM Bank IA
 
 Assistente bancário conversacional **multi-agente** de um banco digital fictício (PoC). Abre contas, emite cartões de crédito e consulta dados por CPF, usando **AG-UI** (usuário ↔ agente), **A2A** (agente ↔ agente) e **MCP** (agente ↔ ferramentas).
 

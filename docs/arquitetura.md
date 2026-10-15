@@ -6,7 +6,7 @@
 
 ## O que é
 
-O MD Bank é um **assistente bancário conversacional multi-agente** de um banco digital fictício. É uma PoC/laboratório de arquitetura de agentes de IA, com dados mock. O cliente conversa em linguagem natural e o sistema:
+O EM Bank é um **assistente bancário conversacional multi-agente** de um banco digital fictício. É uma PoC/laboratório de arquitetura de agentes de IA, com dados mock. O cliente conversa em linguagem natural e o sistema:
 
 - **abre conta**: coleta nome e CPF, verifica se já existe conta e cria uma com número e saldo 0;
 - **emite cartão de crédito**: tipos `platinum`, `gold`, `silver` e `mdzao`. Exige conta pré-existente e gera número e limite;
@@ -55,12 +55,12 @@ O `bfa` aparece em cinza porque nenhum outro container o consome hoje (veja os p
 
 ```mermaid
 C4Container
-    title Nível 2 - Containers do MD Bank AI
+    title Nível 2 - Containers do EM Bank AI
 
     Person(cliente, "Cliente", "Quer abrir conta ou solicitar cartão")
     System_Ext(openai, "Anthropic API", "LLM claude-haiku-5-5")
 
-    System_Boundary(mdbank, "MD Bank AI - docker-compose") {
+    System_Boundary(mdbank, "EM Bank AI - docker-compose") {
         Container(frontend, "frontend", "Streamlit :9090", "Chat simples com resposta síncrona")
         Container(frontend2, "frontend2", "React + Tailwind :3000", "Chat com painel de state compartilhado e streaming")
 
