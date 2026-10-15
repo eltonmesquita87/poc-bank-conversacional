@@ -18,6 +18,12 @@ Assistente bancário conversacional **multi-agente** de um banco digital fictíc
 Cliente ──AG-UI/REST──► supervisor ──A2A──► agentes (abrir_conta, cartao_credito) ──MCP──► recursos (db.json)
 ```
 
+### Arquitetura de componentes
+
+![Arquitetura de componentes do MD Bank AI](docs/img/arquitetura2.png)
+
+Fonte editável: [docs/img/arquitetura.drawio](docs/img/arquitetura.drawio) (abra no draw.io; o PNG também embute o XML). Detalhes em [Arquitetura](docs/arquitetura.md).
+
 | Serviço | Pasta | Papel | Porta (Docker) |
 |---|---|---|---|
 | frontend (Streamlit) | [frontend](frontend) | Chat simples, resposta síncrona | 9090 |
