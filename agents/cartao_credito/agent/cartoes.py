@@ -7,6 +7,8 @@ from langchain_core.messages import HumanMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import InMemorySaver
 
+from observability import callbacks
+
 load_dotenv()
 
 _llm = init_chat_model(
@@ -86,7 +88,7 @@ async def run_agent(mensagem: str, thread_id: str = "1"):
 
     resultado = await agent.ainvoke(
         {"messages": [HumanMessage(content=mensagem)]},
-        {"configurable": {"thread_id": thread_id}},
+        {"configurable": {"thread_id": thread_id}, "callbacks": callbacks()},
     )
 
     return str(resultado["messages"][-1].text)

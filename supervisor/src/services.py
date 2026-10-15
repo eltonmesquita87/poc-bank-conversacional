@@ -12,10 +12,12 @@ from ag_ui.core import (
     TextMessageEndEvent,
     TextMessageStartEvent,
 )
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 from pydantic import BaseModel
 
+from observability import callbacks, current_context, span
 from src.agents import classifique_intencao_do_usuario
 
 logger = logging.getLogger(__name__)
@@ -61,7 +63,19 @@ class StateUpdateEvent(BaseModel):
 # -----------------------------
 
 
-async def request_agent(message: str, agent_url: str) -> str:
+async def request_agent(
+    message: str, agent_url: str, session_id: str | None = None
+) -> str:
+    with span(
+        "a2a.request_agent", input=message, metadata={"agent_url": agent_url}
+    ) as s:
+        resposta = await _request_agent(message, agent_url, session_id)
+        if s is not None:
+            s.update(output=resposta)
+        return resposta
+
+
+async def _request_agent(message: str, agent_url: str, session_id: str | None) -> str:
 
     if agent_url not in CLIENT_CACHE:
         logger.info(f"Descobrindo AgentCard em {agent_url}")
@@ -84,6 +98,8 @@ async def request_agent(message: str, agent_url: str) -> str:
         role=Role.user,
         message_id=str(uuid.uuid4()),
         parts=[Part(root=TextPart(text=message))],
+        # propaga o trace Langfuse para o agente remoto
+        metadata=current_context(session_id) or None,
     )
 
     logger.info(f"Enviando mensagem para agente: {message}")
@@ -102,9 +118,11 @@ async def request_agent(message: str, agent_url: str) -> str:
 # -----------------------------
 
 
-async def no_de_roteamento(state: State):
+async def no_de_roteamento(state: State, config: RunnableConfig):
     query = state.get("query", "")
-    classifications = await classifique_intencao_do_usuario(query)
+    classifications = await classifique_intencao_do_usuario(
+        query, callbacks=config.get("callbacks")
+    )
     logger.info(f"Classificação: {classifications}")
     return [Send(c["agent"], {"query": c["query"]}) for c in classifications]
 
@@ -114,10 +132,11 @@ async def no_de_roteamento(state: State):
 # -----------------------------
 
 
-async def cartao_credito_node(state: State):
+async def cartao_credito_node(state: State, config: RunnableConfig):
     query = state.get("query", "")
     logger.info("Executando agente CARTAO_CREDITO")
-    resposta = await request_agent(query, AGENTS["cartao_credito"])
+    session_id = config.get("metadata", {}).get("langfuse_session_id")
+    resposta = await request_agent(query, AGENTS["cartao_credito"], session_id)
     return {"responses": [resposta]}
 
 
@@ -126,10 +145,11 @@ async def cartao_credito_node(state: State):
 # -----------------------------
 
 
-async def abrir_conta_node(state: State):
+async def abrir_conta_node(state: State, config: RunnableConfig):
     query = state.get("query", "")
     logger.info("Executando agente ABRIR_CONTA")
-    resposta = await request_agent(query, AGENTS["abrir_conta"])
+    session_id = config.get("metadata", {}).get("langfuse_session_id")
+    resposta = await request_agent(query, AGENTS["abrir_conta"], session_id)
     return {"responses": [resposta]}
 
 
@@ -149,10 +169,21 @@ graph = builder.compile()
 # -----------------------------
 
 
-async def executar_supervisor(texto_usuario: str):
+async def executar_supervisor(texto_usuario: str, session_id: str | None = None):
+    session_id = session_id or str(uuid.uuid4())
     input_state: State = {"query": texto_usuario, "responses": []}
-    result = await graph.ainvoke(input_state)
-    return "\n\n".join(result["responses"])
+    with span("supervisor.chat", session_id=session_id, input=texto_usuario) as s:
+        result = await graph.ainvoke(
+            input_state,
+            {
+                "callbacks": callbacks(),
+                "metadata": {"langfuse_session_id": session_id},
+            },
+        )
+        resposta = "\n\n".join(result["responses"])
+        if s is not None:
+            s.update(output=resposta)
+        return resposta
 
 
 # -----------------------------
@@ -163,7 +194,18 @@ async def executar_supervisor(texto_usuario: str):
 async def executar_supervisor_stream(input_data):
     """
     Retorna eventos para AG-UI, incluindo state compartilhado.
+    Envolve o stream num span raiz do Langfuse (session = thread_id AG-UI).
     """
+    session_id = getattr(input_data, "thread_id", None) or str(uuid.uuid4())
+    messages = input_data.messages
+    user_message = messages[-1].content if messages else ""
+
+    with span("supervisor.stream", session_id=session_id, input=user_message):
+        async for event in _executar_supervisor_stream(input_data, session_id):
+            yield event
+
+
+async def _executar_supervisor_stream(input_data, session_id: str):
     messages = input_data.messages
     if not messages:
         user_message = ""
@@ -189,7 +231,9 @@ async def executar_supervisor_stream(input_data):
     yield StateUpdateEvent(state=state)
 
     # Classificação de agentes
-    classifications = await classifique_intencao_do_usuario(user_message)
+    classifications = await classifique_intencao_do_usuario(
+        user_message, callbacks=callbacks()
+    )
     agentes = [c["agent"] for c in classifications]
     yield TextMessageContentEvent(
         type=EventType.TEXT_MESSAGE_CONTENT,
@@ -211,7 +255,7 @@ async def executar_supervisor_stream(input_data):
             delta=f"Chamando agente: {agent_name}...\n",
         )
 
-        resposta = await request_agent(c["query"], AGENTS[agent_name])
+        resposta = await request_agent(c["query"], AGENTS[agent_name], session_id)
         respostas.append(resposta)
 
         yield TextMessageContentEvent(

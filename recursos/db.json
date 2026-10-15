@@ -4,6 +4,11 @@
       "nome": "elton pereira mesquita",
       "numero": 35127,
       "saldo": 0.0
+    },
+    "31884032168": {
+      "nome": "Nayane Sarah Oliveira",
+      "numero": 29121,
+      "saldo": 0.0
     }
   },
   "cartoes": {
@@ -11,6 +16,11 @@
       "numero": 586559,
       "tipo": "Gold",
       "limite": 3582
+    },
+    "31884032168": {
+      "numero": 288595,
+      "tipo": "platinum",
+      "limite": 4981
     }
   }
 }

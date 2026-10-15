@@ -81,14 +81,14 @@ Responda SEMPRE em JSON no formato:
 
 
 async def classifique_intencao_do_usuario(
-    query: str, thread_id: str = "1"
+    query: str, thread_id: str = "1", callbacks: Any = None
 ) -> List[Dict[str, Any]]:
     agent = await build_router_agent()
 
     try:
         resultado = await agent.ainvoke(
             {"messages": [HumanMessage(content=query)]},
-            {"configurable": {"thread_id": thread_id}},
+            {"configurable": {"thread_id": thread_id}, "callbacks": callbacks},
         )
 
         resposta_texto = str(resultado["messages"][-1].text)

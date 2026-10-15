@@ -6,6 +6,7 @@ from a2a.server.events.event_queue import EventQueue
 from a2a.utils import new_agent_text_message
 
 from agent.abrir_conta import run_agent
+from observability import span
 
 logger = logging.getLogger("a2a")
 
@@ -17,7 +18,19 @@ class AbrirContaExecutor(AgentExecutor):
 
         user_text = context.get_user_input()
 
-        response_balance_agent = await run_agent(mensagem=user_text)
+        meta = (context.message.metadata if context.message else None) or {}
+        session_id = meta.get("langfuse_session_id")
+
+        with span(
+            "agent.abrir_conta",
+            session_id=session_id,
+            trace_id=meta.get("langfuse_trace_id"),
+            parent_span_id=meta.get("langfuse_parent_span_id"),
+            input=user_text,
+        ) as s:
+            response_balance_agent = await run_agent(mensagem=user_text)
+            if s is not None:
+                s.update(output=str(response_balance_agent))
 
         await event_queue.enqueue_event(
             new_agent_text_message(str(response_balance_agent))

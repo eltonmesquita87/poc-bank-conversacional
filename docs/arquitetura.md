@@ -213,3 +213,13 @@ Em ordem de relevância:
 2. unificar as duas orquestrações;
 3. ligar o BFA ao supervisor como fonte de descoberta;
 4. tipar o state em vez de usar regex.
+
+## Observabilidade (Langfuse)
+
+Os três serviços agênticos (`supervisor`, `abrir_conta`, `cartao_credito`) enviam traces ao Langfuse via SDK v3 (OpenTelemetry). Cada um tem um `observability.py` idêntico; sem `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` tudo vira no-op.
+
+- **Trace único por pergunta**: span raiz `supervisor.chat` (`/chat`) ou `supervisor.stream` (AG-UI), com router LLM e nós LangGraph aninhados via `CallbackHandler`.
+- **Propagação via A2A**: `request_agent` abre o span `a2a.request_agent` e envia `langfuse_trace_id`, `langfuse_parent_span_id` e `langfuse_session_id` em `Message.metadata`; o `executor.py` do agente abre `agent.<nome>` dentro desse trace.
+- **Sessão**: `session_id` = `thread_id` do AG-UI (ou UUID no `/chat`).
+- **Privacidade**: CPFs são mascarados (`mask` do cliente) antes do envio.
+- **Configuração**: copie `.env.example` para `.env` em cada serviço e preencha as chaves.

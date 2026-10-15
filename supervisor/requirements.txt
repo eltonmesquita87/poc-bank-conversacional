@@ -8,3 +8,4 @@ langchain-anthropic
 langchain-community
 httpx
 python-dotenv
+langfuse>=3,<4

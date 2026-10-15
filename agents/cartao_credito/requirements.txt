@@ -7,3 +7,4 @@ langchain-anthropic
 langchain-community
 langchain-mcp-adapters
 python-dotenv
+langfuse>=3,<4
