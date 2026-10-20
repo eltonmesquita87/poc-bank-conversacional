@@ -1,7 +1,9 @@
 import logging
 import os
+import time
 from typing import Any, Dict, List
 
+from correlation import log_event, safe_payload
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
@@ -84,6 +86,8 @@ async def classifique_intencao_do_usuario(
     query: str, thread_id: str = "1", callbacks: Any = None
 ) -> List[Dict[str, Any]]:
     agent = await build_router_agent()
+    started = time.perf_counter()
+    log_event(logger, "router_llm", "client", "request", payload=safe_payload(query))
 
     try:
         resultado = await agent.ainvoke(
@@ -97,10 +101,27 @@ async def classifique_intencao_do_usuario(
 
         agentes = parsed.get("agents", [])
 
-        logger.info(f"Agentes selecionados: {agentes}")
+        log_event(
+            logger,
+            "router_llm",
+            "client",
+            "response",
+            agents=agentes,
+            payload=safe_payload(resposta_texto),
+            duration_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
 
         return [{"query": query, "agent": agente} for agente in agentes]
 
     except Exception as e:
-        logger.error(f"Erro no router: {e}")
+        # Falha de roteamento não derruba a requisição: cai no fallback para abrir_conta.
+        log_event(
+            logger,
+            "router_llm",
+            "client",
+            "error",
+            error=f"{type(e).__name__}: {e}",
+            fallback="abrir_conta",
+            duration_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
         return [{"query": query, "agent": "abrir_conta"}]

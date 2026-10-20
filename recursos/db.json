@@ -9,6 +9,16 @@
       "nome": "Nayane Sarah Oliveira",
       "numero": 29121,
       "saldo": 0.0
+    },
+    "088.756.510-78": {
+      "nome": "Maria",
+      "numero": 96620,
+      "saldo": 0.0
+    },
+    "123.456.789-09": {
+      "nome": "Maria Silva",
+      "numero": 16149,
+      "saldo": 0.0
     }
   },
   "cartoes": {
@@ -21,6 +31,16 @@
       "numero": 288595,
       "tipo": "platinum",
       "limite": 4981
+    },
+    "088.756.510-78": {
+      "numero": 146159,
+      "tipo": "gold",
+      "limite": 2585
+    },
+    "123.456.789-09": {
+      "numero": 123193,
+      "tipo": "platinum",
+      "limite": 3539
     }
   }
 }

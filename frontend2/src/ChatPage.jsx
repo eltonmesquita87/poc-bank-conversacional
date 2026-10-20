@@ -3,6 +3,9 @@ import AppLayout from "./Layout";
 import ChatBox from "./components/ChatBox";
 import PromptSuggestions from "./components/PromptSuggestions";
 
+// Uma conversa por carga de página: vira thread_id (AG-UI) e X-Conversation-ID.
+const CONVERSATION_ID = crypto.randomUUID();
+
 export default function ChatPage() {
   const { messages, setMessages, loading, setLoading, updateState } =
     useAppState();
@@ -18,9 +21,12 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
+    // Um correlation_id por turno: é o run_id do AG-UI e vai no header X-Correlation-ID.
+    const correlationId = crypto.randomUUID();
+
     const payload = {
-      thread_id: "1",
-      run_id: crypto.randomUUID(),
+      thread_id: CONVERSATION_ID,
+      run_id: correlationId,
       messages: [
         {
           id: crypto.randomUUID(),
@@ -35,14 +41,34 @@ export default function ChatPage() {
       forwardedProps: {},
     };
 
+    console.info(
+      JSON.stringify({
+        event: "frontend.request",
+        correlation_id: correlationId,
+        conversation_id: CONVERSATION_ID,
+      })
+    );
+
     const response = await fetch("http://localhost:8080/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
+        "X-Correlation-ID": correlationId,
+        "X-Conversation-ID": CONVERSATION_ID,
       },
       body: JSON.stringify(payload),
     });
+
+    // Lê o header ecoado pelo supervisor (exposto no CORS) para confirmar a correlação.
+    console.info(
+      JSON.stringify({
+        event: "frontend.response",
+        correlation_id: correlationId,
+        status: response.status,
+        echoed_correlation_id: response.headers.get("X-Correlation-ID"),
+      })
+    );
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");

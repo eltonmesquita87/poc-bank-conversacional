@@ -7,7 +7,8 @@ from langchain_core.messages import HumanMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import InMemorySaver
 
-from observability import callbacks
+from correlation import mcp_http_client_factory
+from observability import callbacks, load_mcp_tools
 
 load_dotenv()
 
@@ -22,6 +23,8 @@ client = MultiServerMCPClient(
         "conta": {
             "transport": "http",
             "url": "http://recursos:8000/mcp_gateway",
+            # injeta X-Correlation-ID/X-Conversation-ID em initialize, tools/list e tools/call
+            "httpx_client_factory": mcp_http_client_factory,
         }  # type: ignore
     }
 )
@@ -32,7 +35,7 @@ agent = None
 
 
 async def build_cartao_agent():
-    tools = await client.get_tools()
+    tools = await load_mcp_tools(client)
 
     agente_cartoes = create_agent(
         _llm,

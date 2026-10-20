@@ -8,7 +8,12 @@ from fastmcp.prompts import Message
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-mcp = FastMCP("ContaService")
+from correlation import mask, setup_logging
+from mcp_logging import CorrelationMcpMiddleware
+
+setup_logging("recursos")
+
+mcp = FastMCP("ContaService", middleware=[CorrelationMcpMiddleware()])
 
 DB_FILE = "/app/db.json"
 
@@ -163,7 +168,7 @@ async def consultar_cartao(cpf: str, ctx: Context):
 )
 async def criar_ou_buscar_conta(nome: str, cpf: str, ctx: Context):
     cpf = cpf.strip()
-    await ctx.info(f"[Conta] Processando CPF {cpf}")
+    await ctx.info(f"[Conta] Processando CPF {mask(cpf)}")
 
     resource = await ctx.read_resource(f"conta://{cpf}")
     data = extract_resource_data(resource)
@@ -199,7 +204,7 @@ async def criar_ou_buscar_conta(nome: str, cpf: str, ctx: Context):
 )
 async def solicitar_cartao(cpf: str, tipo: str, ctx: Context):
     cpf = cpf.strip()
-    await ctx.info(f"[Cartão] Solicitação para CPF {cpf}")
+    await ctx.info(f"[Cartão] Solicitação para CPF {mask(cpf)}")
 
     resource = await ctx.read_resource(f"conta://{cpf}")
     conta = extract_resource_data(resource)

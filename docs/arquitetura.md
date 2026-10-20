@@ -214,12 +214,61 @@ Em ordem de relevância:
 3. ligar o BFA ao supervisor como fonte de descoberta;
 4. tipar o state em vez de usar regex.
 
-## Observabilidade (Langfuse)
+## Observabilidade (logs de correlação e Langfuse)
 
-Os três serviços agênticos (`supervisor`, `abrir_conta`, `cartao_credito`) enviam traces ao Langfuse via SDK v3 (OpenTelemetry). Cada um tem um `observability.py` idêntico; sem `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` tudo vira no-op.
+Cada mensagem do usuário recebe um **correlation ID** que percorre frontend, supervisor, roteador LLM, agentes A2A, LLM e MCP. Todos os serviços emitem logs JSON com esse ID, e o Langfuse recebe os traces (SDK v3). Sem `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` o trace fica no-op; os logs funcionam sempre.
 
-- **Trace único por pergunta**: span raiz `supervisor.chat` (`/chat`) ou `supervisor.stream` (AG-UI), com router LLM e nós LangGraph aninhados via `CallbackHandler`.
-- **Propagação via A2A**: `request_agent` abre o span `a2a.request_agent` e envia `langfuse_trace_id`, `langfuse_parent_span_id` e `langfuse_session_id` em `Message.metadata`; o `executor.py` do agente abre `agent.<nome>` dentro desse trace.
-- **Sessão**: `session_id` = `thread_id` do AG-UI (ou UUID no `/chat`).
-- **Privacidade**: CPFs são mascarados (`mask` do cliente) antes do envio.
-- **Configuração**: copie `.env.example` para `.env` em cada serviço e preencha as chaves.
+### IDs
+
+- `correlation_id`: um por turno. O Streamlit gera; o React usa o `run_id` do AG-UI.
+- `conversation_id`: um por conversa. O Streamlit guarda no `st.session_state`; o React gera uma vez por carga de página. Substitui o `session_id="123"` do Streamlit e o `thread_id="1"` do React, que faziam todas as conversas cair na mesma sessão do Langfuse.
+
+O supervisor devolve `correlation_id` no corpo de `/chat` e no header `X-Correlation-ID` (exposto no CORS). Um valor inválido ou ausente (fora de `^[A-Za-z0-9._-]{8,64}$`) é substituído por um UUID novo.
+
+### Propagação por salto
+
+| Salto | Como o ID viaja |
+|---|---|
+| frontend → supervisor | headers `X-Correlation-ID` e `X-Conversation-ID`; no AG-UI, `run_id` e `thread_id` |
+| supervisor → agente (A2A) | `Message.metadata` (`correlation_id`, `conversation_id`) e header HTTP por chamada (`ClientCallContext`) |
+| agente → MCP (`recursos`) | header HTTP em `initialize`, `tools/list` e `tools/call` (`mcp_http_client_factory`) |
+| LLM e tools | `CorrelationLogHandler` nos callbacks, lendo o contexto do processo |
+
+### Catálogo de eventos
+
+Cada linha é JSON com `ts`, `level`, `service`, `logger`, `correlation_id`, `conversation_id` e `msg`, em que `msg` = `<integração>.<fase>`. Para `llm`, `tool` e `mcp`, os campos variam conforme a fase (`model`, `tool`, `operation` etc.).
+
+| Integração | Fases | Onde aparece |
+|---|---|---|
+| `frontend` | request, response, error | Streamlit (`frontend/app.py`) |
+| `http` | request, response, error | todos (middleware ASGI) |
+| `chat` | request, response, error | supervisor |
+| `router_llm` | request, response, error (com `agents` e `fallback`) | supervisor |
+| `llm` | request, response, error | supervisor e agentes |
+| `a2a` | request, response, error (`role`: client ou server) | supervisor (cliente), agentes (servidor) |
+| `mcp` | request, response, error | agentes (cliente, `list_tools`), `recursos` (servidor, por `method`) |
+| `tool` | request, response, error | agentes (cliente), `recursos` (servidor) |
+
+### Privacidade
+
+- CPF é mascarado (`***.***.***-**`) em todos os logs e no Langfuse.
+- `LOG_PAYLOAD=off|truncated|full` controla o conteúdo logado (mensagens, respostas, argumentos de tool). O padrão é `truncated`, com `LOG_PAYLOAD_MAX_CHARS=2000`. Com `off`, o log registra só os metadados.
+- Nomes e outros dados livres **não** são mascarados. Em ambientes reais, use `LOG_PAYLOAD=off`.
+
+### Como seguir uma conversa
+
+```powershell
+docker compose logs --no-color --no-log-prefix | Select-String "<correlation_id>"
+```
+
+Para a conversa inteira, use o `conversation_id` no lugar do `correlation_id`.
+
+### Manutenção
+
+- `correlation.py` existe em 5 serviços e `observability.py` em 3. Cada serviço é um contexto Docker próprio, então as cópias devem ser idênticas. `scripts/check-correlation-sync.ps1` (ou `.sh`) verifica isso.
+- Testes unitários: `pytest supervisor/tests` (o do MCP roda no venv de um agente, onde `mcp` está instalado).
+- **Lacuna conhecida:** quando o LangGraph cancela um ramo (por exemplo, `cartao_credito` quando `abrir_conta` falha), o agente cancelado registra só `a2a.request`, sem `a2a.response` nem `a2a.error`.
+
+### Configuração
+
+Copie `.env.example` para `.env` em cada serviço e preencha as chaves. As variáveis `LOG_PAYLOAD`, `LOG_PAYLOAD_MAX_CHARS` e `LOG_LEVEL` já têm padrão no código.
