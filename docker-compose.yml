@@ -34,6 +34,17 @@ services:
     ports:
       - "8082:8000"
 
+  pagamentos_agent:
+    container_name: pagamentos_agent
+    build:
+      context: ./agents/pagamentos
+    volumes:
+      - ./agents/pagamentos:/app
+    ports:
+      - "8086:8000"
+    depends_on:
+      - pix_mcp
+
   bfa:
     container_name: bfa
     build:
@@ -44,9 +55,11 @@ services:
       - "8083:8000"
     depends_on:
       - recursos
+      - pix_mcp
       - supervisor
       - abrir_conta_agent
       - cartao_credito_agent
+      - pagamentos_agent
 
   recursos:
     container_name: recursos
@@ -56,6 +69,24 @@ services:
       - ./recursos:/app
     ports:
       - "8084:8000"
+  # Servidor MCP do Pix. O pix-service (repositório separado) roda FORA deste compose:
+  # por padrão, no host, na porta 8089 (application.yml). Sobrescreva com PIX_SERVICE_URL
+  # exportada no shell ou em um .env na raiz.
+  pix_mcp:
+    container_name: pix_mcp
+    build:
+      context: ./pix_mcp
+    volumes:
+      - ./pix_mcp:/app
+    ports:
+      - "8085:8000"
+    environment:
+      - PIX_SERVICE_URL=${PIX_SERVICE_URL:-http://host.docker.internal:8089}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - recursos
+
   frontend-ag-ui:
     build: ./frontend2
     container_name: frontend-ag-ui

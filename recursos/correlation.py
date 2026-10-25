@@ -29,6 +29,38 @@ META_CONVERSATION = "conversation_id"
 _ID_RE = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 _CPF = re.compile(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")
 _CPF_MASK = "***.***.***-**"
+# Chaves Pix: e-mail, telefone BR (10/11 dígitos, DDI/DDD opcionais) e EVP (UUID hifenizado).
+# Os lookarounds do telefone evitam casar dentro de IDs (ex.: endToEndId "E"+hex, "ix_<hex>")
+# e a parte inteira de valores decimais.
+_EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b")
+_EMAIL_MASK = "***@***"
+_PHONE = re.compile(
+    r"(?<![\w.+-])(?:\+55[\s-]?)?\(?\d{2}\)?[\s-]?9?\d{4}-?\d{4}(?![\w-]|\.\d)"
+)
+_PHONE_MASK = "(**) *****-****"
+_EVP = re.compile(
+    r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+)
+_EVP_MASK = "********-****-****-****-************"
+# Os IDs de correlação são UUIDs hifenizados (new_id): sem esta lista, a máscara de EVP os
+# destruiria nos metadados enviados ao Langfuse e quebraria o rastreio.
+_UNMASKED_KEYS = frozenset(
+    {
+        "correlation_id",
+        "conversation_id",
+        "session_id",
+        "trace_id",
+        "langfuse_trace_id",
+        "langfuse_parent_span_id",
+        "langfuse_session_id",
+        "a2a_task_id",
+        "a2a_context_id",
+        "a2a_message_id",
+        "intent_id",
+        "end_to_end_id",
+        "endToEndId",
+    }
+)
 
 _correlation_id: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
     "correlation_id", default=None
@@ -154,11 +186,19 @@ def resolve_ids(
 
 
 def mask(data: Any) -> Any:
-    """Mascara CPF em strings, dicts, listas e tuplas (mesma regra de observability.py)."""
+    """Mascara CPF, e-mail, telefone e EVP em strings, dicts, listas e tuplas.
+
+    É a regra única de privacidade: observability.py (Langfuse) delega para esta função.
+    Valores de chaves de ID (`_UNMASKED_KEYS`) passam intactos.
+    """
     if isinstance(data, str):
-        return _CPF.sub(_CPF_MASK, data)
+        # E-mail primeiro: o local-part pode ser só dígitos e casaria como CPF/telefone.
+        data = _EMAIL.sub(_EMAIL_MASK, data)
+        data = _CPF.sub(_CPF_MASK, data)
+        data = _EVP.sub(_EVP_MASK, data)
+        return _PHONE.sub(_PHONE_MASK, data)
     if isinstance(data, dict):
-        return {k: mask(v) for k, v in data.items()}
+        return {k: (v if k in _UNMASKED_KEYS else mask(v)) for k, v in data.items()}
     if isinstance(data, (list, tuple)):
         return [mask(v) for v in data]
     return data

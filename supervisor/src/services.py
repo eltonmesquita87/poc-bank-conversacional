@@ -42,7 +42,12 @@ HTTPX_CLIENT = httpx.AsyncClient(timeout=30)
 AGENTS = {
     "cartao_credito": "http://cartao_credito_agent:8000",
     "abrir_conta": "http://abrir_conta_agent:8000",
+    "pagamentos_pix": "http://pagamentos_agent:8000",
 }
+
+# Agente usado quando o router falha ou devolve só nomes desconhecidos (o mesmo fallback de
+# classifique_intencao_do_usuario). É o único sem ação financeira.
+AGENTE_FALLBACK = "abrir_conta"
 
 # Cache de clientes A2A
 CLIENT_CACHE = {}
@@ -169,10 +174,24 @@ async def _request_agent(message: str, agent_url: str, session_id: str | None) -
 # -----------------------------
 
 
+def somente_agentes_conhecidos(classifications: list[dict], query: str) -> list[dict]:
+    """Descarta agentes que o LLM do router inventou.
+
+    Sem isso, um nome fora de `AGENTS` dá KeyError no stream AG-UI e nó inexistente no grafo.
+    Se não sobrar nenhum, cai no agente de fallback.
+    """
+    conhecidos = [c for c in classifications if c.get("agent") in AGENTS]
+    descartados = [c.get("agent") for c in classifications if c.get("agent") not in AGENTS]
+    if descartados:
+        logger.warning(f"Router devolveu agentes desconhecidos: {descartados}")
+    return conhecidos or [{"query": query, "agent": AGENTE_FALLBACK}]
+
+
 async def no_de_roteamento(state: State, config: RunnableConfig):
     query = state.get("query", "")
-    classifications = await classifique_intencao_do_usuario(
-        query, callbacks=config.get("callbacks")
+    classifications = somente_agentes_conhecidos(
+        await classifique_intencao_do_usuario(query, callbacks=config.get("callbacks")),
+        query,
     )
     # Só os agentes: o texto da query pode conter CPF e já sai mascarado em log_event
     logger.info(f"Classificação: {[c['agent'] for c in classifications]}")
@@ -206,14 +225,29 @@ async def abrir_conta_node(state: State, config: RunnableConfig):
 
 
 # -----------------------------
+# NODE PAGAMENTOS PIX
+# -----------------------------
+
+
+async def pagamentos_pix_node(state: State, config: RunnableConfig):
+    query = state.get("query", "")
+    logger.info("Executando agente PAGAMENTOS_PIX")
+    session_id = config.get("metadata", {}).get("langfuse_session_id")
+    resposta = await request_agent(query, AGENTS["pagamentos_pix"], session_id)
+    return {"responses": [resposta]}
+
+
+# -----------------------------
 # BUILD DO GRAFO
 # -----------------------------
 builder = StateGraph(State)
 builder.add_node("cartao_credito", cartao_credito_node)
 builder.add_node("abrir_conta", abrir_conta_node)
+builder.add_node("pagamentos_pix", pagamentos_pix_node)
 builder.add_conditional_edges(START, no_de_roteamento)
 builder.add_edge("cartao_credito", END)
 builder.add_edge("abrir_conta", END)
+builder.add_edge("pagamentos_pix", END)
 graph = builder.compile()
 
 # -----------------------------
@@ -298,8 +332,9 @@ async def _executar_supervisor_stream(input_data, session_id: str):
     yield StateUpdateEvent(state=state)
 
     # Classificação de agentes
-    classifications = await classifique_intencao_do_usuario(
-        user_message, callbacks=callbacks()
+    classifications = somente_agentes_conhecidos(
+        await classifique_intencao_do_usuario(user_message, callbacks=callbacks()),
+        user_message,
     )
     agentes = [c["agent"] for c in classifications]
     yield TextMessageContentEvent(

@@ -15,7 +15,7 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-for env_file in supervisor/.env agents/abrir_conta/.env agents/cartao_credito/.env; do
+for env_file in supervisor/.env agents/abrir_conta/.env agents/cartao_credito/.env agents/pagamentos/.env; do
     if [ ! -f "$env_file" ]; then
         echo "AVISO: $env_file não encontrado (defina ANTHROPIC_API_KEY)." >&2
     fi

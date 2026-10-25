@@ -10,12 +10,14 @@ Assistente bancário conversacional **multi-agente** de um banco digital fictíc
 | [Executando localmente com UV](docs/execucao-local-uv.md) | Rodar cada serviço sem Docker, com ambiente virtual por projeto |
 | [Depurando no VS Code](docs/depuracao-vscode.md) | Breakpoints nos serviços locais, com configurações prontas no workspace |
 | [Exemplos de conversa](docs/exemplos-de-conversa.md) | Fluxo completo e frases para testar o roteador |
+| [Pagamentos Pix](docs/pagamentos-pix.md) | Contrato com o `pix-service`, lacunas, mapeamento de erros e riscos aceitos |
 | [Arquitetura](docs/arquitetura.md) | Diagramas C4, integrações, fluxo principal, pontos de atenção e próximos passos |
 
 ## Visão geral
 
 ```text
 Cliente ──AG-UI/REST──► supervisor ──A2A──► agentes (abrir_conta, cartao_credito) ──MCP──► recursos (db.json)
+                                          └─A2A──► pagamentos ──MCP──► pix_mcp ──REST──► pix-service (externo)
 ```
 
 ### Arquitetura de componentes
@@ -31,8 +33,10 @@ Fonte editável: [docs/img/arquitetura.drawio](docs/img/arquitetura.drawio) (abr
 | supervisor | [supervisor](supervisor) | Classifica a intenção, delega e agrega | 8080 |
 | abrir_conta | [agents/abrir_conta](agents/abrir_conta) | Especialista em abertura de conta | 8081 |
 | cartao_credito | [agents/cartao_credito](agents/cartao_credito) | Especialista em cartões | 8082 |
+| pagamentos | [agents/pagamentos](agents/pagamentos) | Especialista em Pix (carteira, chaves e saldo) | 8086 |
 | bfa | [bfa](bfa) | Registro unificado de agentes e tools | 8083 |
 | recursos | [recursos](recursos) | Servidor MCP com as regras de negócio | 8084 |
+| pix_mcp | [pix_mcp](pix_mcp) | Servidor MCP do Pix: traduz as tools em chamadas ao `pix-service` (repositório separado, fora do compose) | 8085 |
 
 ## Início rápido
 

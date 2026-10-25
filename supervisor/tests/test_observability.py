@@ -5,7 +5,7 @@ from uuid import uuid4
 from correlation import bind, setup_logging
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
-from observability import CorrelationLogHandler, callbacks
+from observability import CorrelationLogHandler, _mask, callbacks
 
 CORR = "corr-aaaa-1111"
 CONV = "conv-aaaa-1111"
@@ -17,6 +17,20 @@ def _events(capsys):
         for line in capsys.readouterr().out.splitlines()
         if line.startswith("{")
     ]
+
+
+def test_langfuse_mask_delegates_to_shared_rule_and_keeps_correlation_ids():
+    # O Langfuse chama o callback como mask(data=...); metadados de rastreio não podem ser
+    # mascarados (os IDs são UUIDs), mas dados pessoais no input/output sim.
+    uid = str(uuid4())
+    out = _mask(
+        data={
+            "input": "CPF 123.456.789-09, e-mail ana@example.com, fone (11) 99999-8888",
+            "metadata": {"correlation_id": uid, "conversation_id": uid},
+        }
+    )
+    assert out["metadata"] == {"correlation_id": uid, "conversation_id": uid}
+    assert out["input"] == "CPF ***.***.***-**, e-mail ***@***, fone (**) *****-****"
 
 
 def test_llm_events_mask_cpf_skip_system_and_carry_ids(capsys, monkeypatch):

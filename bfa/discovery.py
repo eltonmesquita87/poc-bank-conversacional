@@ -5,7 +5,8 @@ from a2a.client import A2ACardResolver
 
 AGENT_ENDPOINTS = [
     "http://cartao_credito_agent:8000",
-    "http://abrir_conta_agent:8000"
+    "http://abrir_conta_agent:8000",
+    "http://pagamentos_agent:8000",
 ]
 
 

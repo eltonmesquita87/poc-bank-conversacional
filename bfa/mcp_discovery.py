@@ -3,7 +3,8 @@ import json
 import httpx
 
 MCP_ENDPOINTS = [
-    "http://recursos:8000"
+    "http://recursos:8000",
+    "http://pix_mcp:8000",
 ]
 
 

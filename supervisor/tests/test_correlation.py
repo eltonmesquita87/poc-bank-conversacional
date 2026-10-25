@@ -114,6 +114,49 @@ def test_mask_cpf_in_nested_structures():
     assert masked["b"][0] == "***.***.***-**"
 
 
+@pytest.mark.parametrize(
+    "texto, esperado",
+    [
+        ("chave joao.silva+pix@example.com.br ok", "chave ***@*** ok"),
+        ("fone (11) 99999-8888", "fone (**) *****-****"),
+        ("fone +55 11 99999-8888", "fone (**) *****-****"),
+        ("fone 1133334444", "fone (**) *****-****"),
+        (
+            "evp 123e4567-e89b-12d3-a456-426614174000",
+            "evp ********-****-****-****-************",
+        ),
+        # e-mail antes de CPF/telefone: local-part só de dígitos não vira "***.***.***-**@x"
+        ("11999998888@example.com", "***@***"),
+    ],
+)
+def test_mask_pix_keys(texto, esperado):
+    assert mask(texto) == esperado
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "E3f2a9c1d4b5e6f708192a3b4c5d6e7f8",  # endToEndId: "E" + hex
+        "ix_0123456789abcdef0123",  # intent_id
+        "valor 1234567890.50 e R$ 1500,00",  # inteiro de decimal não é telefone
+        "ts 2026-10-24T10:00:00",
+        "id 12345678901234567890",  # sequência longa de dígitos não é telefone
+        "conta 12345",
+    ],
+)
+def test_mask_does_not_touch_identifiers_and_amounts(texto):
+    assert mask(texto) == texto
+
+
+def test_mask_keeps_id_keys_but_masks_the_same_value_elsewhere():
+    # IDs de correlação são UUIDs hifenizados (new_id): não podem ser mascarados como EVP.
+    uid = new_id()
+    masked = mask({"correlation_id": uid, "conversation_id": uid, "msg": uid})
+    assert masked["correlation_id"] == uid
+    assert masked["conversation_id"] == uid
+    assert masked["msg"] == "********-****-****-****-************"
+
+
 def test_safe_payload_off_returns_none(monkeypatch):
     monkeypatch.setenv("LOG_PAYLOAD", "off")
     assert safe_payload("qualquer coisa") is None

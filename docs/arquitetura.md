@@ -251,7 +251,7 @@ Cada linha é JSON com `ts`, `level`, `service`, `logger`, `correlation_id`, `co
 
 ### Privacidade
 
-- CPF é mascarado (`***.***.***-**`) em todos os logs e no Langfuse.
+- CPF (`***.***.***-**`), e-mail (`***@***`), telefone BR (`(**) *****-****`) e EVP/UUID hifenizado são mascarados em todos os logs e no Langfuse, pela função única `mask()` de `correlation.py`. Valores de chaves de ID (`correlation_id`, `conversation_id`, `intent_id`, `end_to_end_id`) passam intactos, porque os IDs de correlação são UUIDs. Detalhes em [Pagamentos Pix](pagamentos-pix.md#8-privacidade-implementada-fase-1).
 - `LOG_PAYLOAD=off|truncated|full` controla o conteúdo logado (mensagens, respostas, argumentos de tool). O padrão é `truncated`, com `LOG_PAYLOAD_MAX_CHARS=2000`. Com `off`, o log registra só os metadados.
 - Nomes e outros dados livres **não** são mascarados. Em ambientes reais, use `LOG_PAYLOAD=off`.
 

@@ -9,7 +9,6 @@ cada um é um contexto Docker próprio. `scripts/check-correlation-sync.*` verif
 
 import logging
 import os
-import re
 import time
 from contextlib import contextmanager
 from functools import wraps
@@ -19,13 +18,12 @@ from correlation import (
     get_conversation_id,
     get_correlation_id,
     log_event,
+    mask,
     safe_payload,
 )
 from langchain_core.callbacks import AsyncCallbackHandler
 
 logger = logging.getLogger(__name__)
-
-_CPF = re.compile(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")
 
 _client: Any = None
 _initialized = False
@@ -36,14 +34,12 @@ def enabled() -> bool:
 
 
 def _mask(data: Any, **_: Any) -> Any:
-    """Mascara CPF antes de enviar input/output ao Langfuse."""
-    if isinstance(data, str):
-        return _CPF.sub("***.***.***-**", data)
-    if isinstance(data, dict):
-        return {k: _mask(v) for k, v in data.items()}
-    if isinstance(data, (list, tuple)):
-        return [_mask(v) for v in data]
-    return data
+    """Mascara dados pessoais (CPF, e-mail, telefone, EVP) antes de enviar ao Langfuse.
+
+    O Langfuse chama este callback com `data=` por palavra-chave; a regra vive em
+    `correlation.mask`, para os logs e o Langfuse nunca divergirem.
+    """
+    return mask(data)
 
 
 def get_client() -> Any:

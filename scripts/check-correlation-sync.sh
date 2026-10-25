@@ -7,8 +7,8 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 declare -A groups=(
-    [correlation.py]="supervisor agents/abrir_conta agents/cartao_credito recursos frontend"
-    [observability.py]="supervisor agents/abrir_conta agents/cartao_credito"
+    [correlation.py]="supervisor agents/abrir_conta agents/cartao_credito agents/pagamentos recursos pix_mcp frontend"
+    [observability.py]="supervisor agents/abrir_conta agents/cartao_credito agents/pagamentos"
 )
 
 divergent=0

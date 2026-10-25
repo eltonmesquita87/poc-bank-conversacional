@@ -19,7 +19,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-foreach ($envFile in 'supervisor/.env', 'agents/abrir_conta/.env', 'agents/cartao_credito/.env') {
+foreach ($envFile in 'supervisor/.env', 'agents/abrir_conta/.env', 'agents/cartao_credito/.env', 'agents/pagamentos/.env') {
     if (-not (Test-Path $envFile)) {
         Write-Warning "$envFile não encontrado (defina ANTHROPIC_API_KEY)."
     }

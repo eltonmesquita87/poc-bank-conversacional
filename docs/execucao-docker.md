@@ -8,7 +8,8 @@ Fluxo recomendado: sobe todos os serviços com um único comando, sem instalar P
 |---|---|
 | Docker Desktop | Com Docker Compose v2 (`docker compose`). No Windows, use o backend WSL 2 |
 | Chave da Anthropic | Usada com o modelo `claude-haiku-5-5` pelo supervisor e pelos dois agentes |
-| Portas livres | 3000, 8080, 8081, 8082, 8083, 8084 e 9090 |
+| Portas livres | 3000, 8080, 8081, 8082, 8083, 8084, 8085, 8086 e 9090 |
+| `pix-service` (só para o Pix) | Repositório separado, **fora** deste compose. Deve estar no ar no host, por padrão em `http://localhost:8089`. Sem ele, o resto funciona e as tools de Pix respondem "serviço Pix indisponível" |
 | Git | Para clonar o repositório |
 
 ## Passo a passo
@@ -21,13 +22,14 @@ cd MD_BANK_IA
 git checkout feature/modulo1
 ```
 
-**2. Crie o arquivo `.env` em três serviços**
+**2. Crie o arquivo `.env` em quatro serviços**
 
 O código lê `ANTHROPIC_API_KEY` com `load_dotenv()`, e o `docker-compose.yml` não define `env_file`. Por isso o arquivo precisa existir **dentro de cada pasta** abaixo (a pasta é montada em `/app` no container):
 
 - `supervisor/.env`
 - `agents/abrir_conta/.env`
 - `agents/cartao_credito/.env`
+- `agents/pagamentos/.env`
 
 Conteúdo, o mesmo nos três:
 
@@ -90,8 +92,10 @@ Use os exemplos de [Exemplos de conversa](exemplos-de-conversa.md).
 | supervisor | 8080 | `POST /` (AG-UI), `POST /chat` (REST), `/docs` |
 | abrir_conta_agent | 8081 | `/.well-known/agent-card.json` |
 | cartao_credito_agent | 8082 | `/.well-known/agent-card.json` |
+| pagamentos_agent | 8086 | `/.well-known/agent-card.json` |
 | bfa | 8083 | `/docs` |
 | recursos (MCP) | 8084 | `/mcp_gateway` |
+| pix_mcp (MCP) | 8085 | `/mcp_gateway`, `/tools` |
 
 ## Testando sem frontend
 
@@ -135,11 +139,19 @@ O código é montado por volume e os serviços rodam com `--reload`, então alte
 
 Os dados de contas e cartões ficam em `recursos/db.json`. Para zerar o ambiente, pare os containers e apague esse arquivo.
 
+### Pix
+
+- O `pix_mcp` chama o `pix-service` em `PIX_SERVICE_URL`. O compose usa `http://host.docker.internal:8089` (porta do `application.yml` do `pix-service`; o README dele diz 8080, veja [Pagamentos Pix](pagamentos-pix.md)). Para outro endereço, exporte a variável antes do `docker compose up` ou coloque-a em um `.env` na raiz.
+- O vínculo CPF → carteira Pix fica em `pix_mcp/pix_db.json` (contém CPF em texto claro; está no `.gitignore`). Para zerar, pare o `pix_mcp` e apague o arquivo. Isso **não** apaga as carteiras no `pix-service`.
+- O `pix_mcp` só cria carteira para quem já tem conta em `recursos`.
+- O `pix_mcp/.env` é opcional no Docker (modelo em `pix_mcp/.env.example`). Para produção, defina `PIX_USER_ID_SECRET`.
+
 ## Problemas comuns
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| Erro 401 / `invalid_api_key` nos logs | `.env` ausente ou chave inválida em algum dos três serviços | Confira os três `.env` e rode `docker compose restart` |
+| Erro 401 / `invalid_api_key` nos logs | `.env` ausente ou chave inválida em algum dos quatro serviços | Confira os quatro `.env` e rode `docker compose restart` |
+| Tools de Pix respondem "serviço Pix indisponível" | `pix-service` fora do ar ou em outra porta | Suba o `pix-service` no host e confira `PIX_SERVICE_URL`; veja `docker compose logs pix_mcp` (eventos `pix.error`) |
 | `port is already allocated` | Porta em uso no host | Libere a porta ou altere o mapeamento em `docker-compose.yml` |
 | Frontend React não alcança o supervisor | O `frontend2` chama `http://localhost:8080/` direto do browser | Confirme que o supervisor está de pé na 8080 |
 | Agente "esquece" ou mistura dados entre conversas | Memória compartilhada (`thread_id="1"`); veja os [pontos de atenção](arquitetura.md#pontos-de-atenção) | Reinicie o `supervisor` e os agentes |
